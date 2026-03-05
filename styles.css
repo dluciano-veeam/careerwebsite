@@ -281,7 +281,7 @@ h2 svg{
 	padding:24px;
 	width:100%;
 	box-sizing:border-box;
-	cursor:pointer;
+	cursor:default;
 	clip-path:polygon(
 		16px 0%,
 		100% 0%,
@@ -293,7 +293,7 @@ h2 svg{
 }
 
 .career-path-map *{
-	cursor:pointer;
+	cursor:inherit;
 }
 
 .career-path-map svg{
@@ -309,6 +309,7 @@ h2 svg{
 	transform-box:fill-box;
 	transform-origin:center;
 	transition:transform .28s ease, opacity .28s ease, filter .28s ease;
+	cursor:pointer;
 }
 
 .career-path-map .track-intro{
