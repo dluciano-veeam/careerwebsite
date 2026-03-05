@@ -276,6 +276,24 @@ h2 svg{
 	margin-top:8px;
 }
 
+.career-path-intro{
+	margin-bottom:16px;
+	color:#000;
+}
+
+.career-path-intro h3{
+	margin:0 0 8px;
+	font-size:24px;
+	font-weight:400;
+	color:#000;
+	line-height:1.25;
+}
+
+.career-path-intro p{
+	margin:0;
+	max-width:900px;
+}
+
 .career-path-map{
 	background:#fff;
 	padding:24px;
