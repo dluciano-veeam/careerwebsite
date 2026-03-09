@@ -141,6 +141,7 @@ h2 svg{
 	position:relative;
 	width:100%;
 	overflow:hidden;
+	border-bottom-right-radius: 48px;
 }
 
 #topBannerPicture img{

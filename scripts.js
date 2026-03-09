@@ -290,8 +290,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
 (function(){
 
-	const mapHost = document.getElementById("careerPathMap");
-	if(!mapHost) return;
+	const mapHosts = [...document.querySelectorAll(".career-path-map")];
+	if(!mapHosts.length) return;
 
 	const tracks = [
 		{ key: "support", color: "#00D15F", glow: "rgba(0,209,95,.28)", href: "SupportTrack.pdf" },
@@ -300,169 +300,171 @@ document.addEventListener("DOMContentLoaded", () => {
 		{ key: "executive", color: "#57E0FF", glow: "rgba(87,224,255,.26)", href: "ExecutiveTrack.pdf" }
 	];
 
-	const svg = mapHost.querySelector("svg");
-	if(!svg) return;
+	mapHosts.forEach((mapHost, mapIndex) => {
+		const svg = mapHost.querySelector("svg");
+		if(!svg) return;
 
-	svg.setAttribute("role", "img");
-	svg.setAttribute("aria-label", "Career path map");
+		svg.setAttribute("role", "img");
+		svg.setAttribute("aria-label", `Career path map ${mapIndex + 1}`);
 
-	// Labels are outlined white paths; disable pointer events so clicks hit colored shapes.
-	svg.querySelectorAll('[fill="white"], [fill="#FFFFFF"], [fill="#fff"]').forEach(node => {
-		node.classList.add("track-label");
-	});
-
-	tracks.forEach(track => {
-		const nodes = svg.querySelectorAll(`[fill="${track.color}"]`);
-		nodes.forEach(node => {
-			node.classList.add("track-shape", `track-${track.key}`);
-			node.setAttribute("data-track-key", track.key);
-			node.setAttribute("data-no-smooth", "true");
-			node.style.setProperty("--track-glow", track.glow);
-		});
-	});
-
-	// Arrow connectors use gradient fills (url(#paint...)); map them to track color.
-	const gradientTrackMap = {};
-	svg.querySelectorAll("defs linearGradient[id]").forEach(gradient => {
-		const gradientId = gradient.id;
-		const stops = [...gradient.querySelectorAll("stop")].map(stop => (stop.getAttribute("stop-color") || "").toUpperCase());
-		const track = tracks.find(item => stops.includes(item.color.toUpperCase()));
-		if(track){
-			gradientTrackMap[gradientId] = track.key;
-		}
-	});
-
-	[...svg.querySelectorAll('[fill^="url(#paint"]')].forEach(node => {
-		const fillValue = node.getAttribute("fill") || "";
-		const match = fillValue.match(/^url\(#([^)]+)\)$/);
-		if(!match) return;
-
-		const gradientId = match[1];
-		const trackKey = gradientTrackMap[gradientId];
-		if(!trackKey) return;
-
-		node.classList.add("track-arrow", `track-arrow-${trackKey}`);
-		const track = tracks.find(item => item.key === trackKey);
-		if(track){
-			node.style.setProperty("--track-glow", track.glow);
-		}
-	});
-
-	let activeTrackKey = null;
-
-	function setTrackFocus(trackKey){
-		if(trackKey === activeTrackKey) return;
-		activeTrackKey = trackKey;
-
-		svg.querySelectorAll(".track-shape").forEach(node => {
-			const isActive = trackKey && node.dataset.trackKey === trackKey;
-			node.classList.toggle("track-hover", !!isActive);
-			node.classList.toggle("track-muted", !!trackKey && !isActive);
+		// Labels are outlined paths; disable pointer events so clicks hit colored shapes.
+		svg.querySelectorAll('[fill="white"], [fill="#FFFFFF"], [fill="#fff"], [fill="black"], [fill="#000"], [fill="#000000"], [fill="#000000FF"]').forEach(node => {
+			node.classList.add("track-label");
 		});
 
-		svg.querySelectorAll(".track-arrow").forEach(node => {
-			const isActive = trackKey && node.classList.contains(`track-arrow-${trackKey}`);
-			node.classList.toggle("track-hover", !!isActive);
-			node.classList.toggle("track-muted", !!trackKey && !isActive);
-		});
-	}
-
-	svg.addEventListener("mousemove", event => {
-		const shape = event.target.closest(".track-shape");
-		setTrackFocus(shape ? shape.dataset.trackKey : null);
-	});
-
-	svg.addEventListener("mouseleave", () => {
-		setTrackFocus(null);
-	});
-
-	svg.addEventListener("click", event => {
-		const shape = event.target.closest(".track-shape");
-		if(!shape) return;
-
-		const track = tracks.find(item => item.key === shape.dataset.trackKey);
-		if(!track) return;
-
-		window.open(track.href, "_blank", "noopener,noreferrer");
-	});
-
-	const appearDelayStep = 95;
-	const arrowPulseLeadMs = 80;
-	const arrowPulseStepMs = 130;
-	let sequenceIndex = 0;
-	let arrowPulseIndex = 0;
-	const introNodes = [...svg.querySelectorAll('[fill="black"], [fill="#000"], [fill="#000000"], [fill="#000000FF"]')];
-
-	introNodes.forEach(node => {
-		node.classList.add("track-intro");
-	});
-
-	function getNodeVisualOrder(node){
-		const box = node.getBBox();
-		return {
-			x: box.x,
-			y: box.y
-		};
-	}
-
-	if(introNodes.length){
-		setTimeout(() => {
-			introNodes.forEach(node => {
-				node.classList.add("track-intro-visible");
+		tracks.forEach(track => {
+			const nodes = svg.querySelectorAll(`[fill="${track.color}"]`);
+			nodes.forEach(node => {
+				node.classList.add("track-shape", `track-${track.key}`);
+				node.setAttribute("data-track-key", track.key);
+				node.setAttribute("data-no-smooth", "true");
+				node.style.setProperty("--track-glow", track.glow);
 			});
-		}, sequenceIndex * appearDelayStep);
-		sequenceIndex++;
-	}
+		});
 
-	tracks.forEach(track => {
-		const orderedNodes = [...svg.querySelectorAll(`.track-${track.key}`)]
-			.sort((a, b) => {
-				const aPos = getNodeVisualOrder(a);
-				const bPos = getNodeVisualOrder(b);
-				const rowGap = Math.abs(aPos.y - bPos.y);
-				if(rowGap > 6) return aPos.y - bPos.y;
-				return aPos.x - bPos.x;
+		// Arrow connectors use gradient fills (url(#paint...)); map them to track color.
+		const gradientTrackMap = {};
+		svg.querySelectorAll("defs linearGradient[id]").forEach(gradient => {
+			const gradientId = gradient.id;
+			const stops = [...gradient.querySelectorAll("stop")].map(stop => (stop.getAttribute("stop-color") || "").toUpperCase());
+			const track = tracks.find(item => stops.includes(item.color.toUpperCase()));
+			if(track){
+				gradientTrackMap[gradientId] = track.key;
+			}
+		});
+
+		[...svg.querySelectorAll('[fill^="url(#paint"]')].forEach(node => {
+			const fillValue = node.getAttribute("fill") || "";
+			const match = fillValue.match(/^url\(#([^)]+)\)$/);
+			if(!match) return;
+
+			const gradientId = match[1];
+			const trackKey = gradientTrackMap[gradientId];
+			if(!trackKey) return;
+
+			node.classList.add("track-arrow", `track-arrow-${trackKey}`);
+			const track = tracks.find(item => item.key === trackKey);
+			if(track){
+				node.style.setProperty("--track-glow", track.glow);
+			}
+		});
+
+		let activeTrackKey = null;
+
+		function setTrackFocus(trackKey){
+			if(trackKey === activeTrackKey) return;
+			activeTrackKey = trackKey;
+
+			svg.querySelectorAll(".track-shape").forEach(node => {
+				const isActive = trackKey && node.dataset.trackKey === trackKey;
+				node.classList.toggle("track-hover", !!isActive);
+				node.classList.toggle("track-muted", !!trackKey && !isActive);
 			});
 
-		orderedNodes.forEach(node => {
+			svg.querySelectorAll(".track-arrow").forEach(node => {
+				const isActive = trackKey && node.classList.contains(`track-arrow-${trackKey}`);
+				node.classList.toggle("track-hover", !!isActive);
+				node.classList.toggle("track-muted", !!trackKey && !isActive);
+			});
+		}
+
+		svg.addEventListener("mousemove", event => {
+			const shape = event.target.closest(".track-shape");
+			setTrackFocus(shape ? shape.dataset.trackKey : null);
+		});
+
+		svg.addEventListener("mouseleave", () => {
+			setTrackFocus(null);
+		});
+
+		svg.addEventListener("click", event => {
+			const shape = event.target.closest(".track-shape");
+			if(!shape) return;
+
+			const track = tracks.find(item => item.key === shape.dataset.trackKey);
+			if(!track) return;
+
+			window.open(track.href, "_blank", "noopener,noreferrer");
+		});
+
+		const appearDelayStep = 95;
+		const arrowPulseLeadMs = 80;
+		const arrowPulseStepMs = 130;
+		let sequenceIndex = 0;
+		let arrowPulseIndex = 0;
+		const introNodes = [...svg.querySelectorAll('[fill="black"], [fill="#000"], [fill="#000000"], [fill="#000000FF"]')];
+
+		introNodes.forEach(node => {
+			node.classList.add("track-intro");
+		});
+
+		function getNodeVisualOrder(node){
+			const box = node.getBBox();
+			return {
+				x: box.x,
+				y: box.y
+			};
+		}
+
+		if(introNodes.length){
 			setTimeout(() => {
-				node.classList.add("track-visible");
-				node.addEventListener("animationend", () => {
-					node.classList.add("track-ready");
-					node.classList.remove("track-visible");
-				}, { once: true });
+				introNodes.forEach(node => {
+					node.classList.add("track-intro-visible");
+				});
 			}, sequenceIndex * appearDelayStep);
 			sequenceIndex++;
-		});
-	});
+		}
 
-	// Arrows animate after all boxes, preserving the same track sequence.
-	tracks.forEach(track => {
-		const orderedArrows = [...svg.querySelectorAll(`.track-arrow-${track.key}`)]
-			.sort((a, b) => {
-				const aPos = getNodeVisualOrder(a);
-				const bPos = getNodeVisualOrder(b);
-				const rowGap = Math.abs(aPos.y - bPos.y);
-				if(rowGap > 6) return aPos.y - bPos.y;
-				return aPos.x - bPos.x;
-			});
+		tracks.forEach(track => {
+			const orderedNodes = [...svg.querySelectorAll(`.track-${track.key}`)]
+				.sort((a, b) => {
+					const aPos = getNodeVisualOrder(a);
+					const bPos = getNodeVisualOrder(b);
+					const rowGap = Math.abs(aPos.y - bPos.y);
+					if(rowGap > 6) return aPos.y - bPos.y;
+					return aPos.x - bPos.x;
+				});
 
-		orderedArrows.forEach(node => {
-			const revealAt = sequenceIndex * appearDelayStep;
-			setTimeout(() => {
-				node.classList.add("track-visible");
-			}, revealAt);
-
-			// "Living trail": short glow pulse in sequence, after arrows appear.
-			setTimeout(() => {
-				node.classList.add("track-lit");
+			orderedNodes.forEach(node => {
 				setTimeout(() => {
-					node.classList.remove("track-lit");
-				}, 360);
-			}, revealAt + arrowPulseLeadMs + (arrowPulseIndex * arrowPulseStepMs));
+					node.classList.add("track-visible");
+					node.addEventListener("animationend", () => {
+						node.classList.add("track-ready");
+						node.classList.remove("track-visible");
+					}, { once: true });
+				}, sequenceIndex * appearDelayStep);
+				sequenceIndex++;
+			});
+		});
 
-			sequenceIndex++;
-			arrowPulseIndex++;
+		// Arrows animate after all boxes, preserving the same track sequence.
+		tracks.forEach(track => {
+			const orderedArrows = [...svg.querySelectorAll(`.track-arrow-${track.key}`)]
+				.sort((a, b) => {
+					const aPos = getNodeVisualOrder(a);
+					const bPos = getNodeVisualOrder(b);
+					const rowGap = Math.abs(aPos.y - bPos.y);
+					if(rowGap > 6) return aPos.y - bPos.y;
+					return aPos.x - bPos.x;
+				});
+
+			orderedArrows.forEach(node => {
+				const revealAt = sequenceIndex * appearDelayStep;
+				setTimeout(() => {
+					node.classList.add("track-visible");
+				}, revealAt);
+
+				// "Living trail": short glow pulse in sequence, after arrows appear.
+				setTimeout(() => {
+					node.classList.add("track-lit");
+					setTimeout(() => {
+						node.classList.remove("track-lit");
+					}, 360);
+				}, revealAt + arrowPulseLeadMs + (arrowPulseIndex * arrowPulseStepMs));
+
+				sequenceIndex++;
+				arrowPulseIndex++;
+			});
 		});
 	});
 
