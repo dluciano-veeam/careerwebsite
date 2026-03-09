@@ -294,15 +294,18 @@ document.addEventListener("DOMContentLoaded", () => {
 	if(!mapHosts.length) return;
 
 	const tracks = [
-		{ key: "support", color: "#00D15F", glow: "rgba(0,209,95,.28)", href: "SupportTrack.pdf" },
-		{ key: "expert", color: "#FD8A26", glow: "rgba(253,138,38,.28)", href: "ExpertTrack.pdf" },
-		{ key: "manager", color: "#8E71F4", glow: "rgba(142,113,244,.26)", href: "ManagerTrack.pdf" },
-		{ key: "executive", color: "#57E0FF", glow: "rgba(87,224,255,.26)", href: "ExecutiveTrack.pdf" }
+		{ key: "support", label: "Support Track", tabLabel: "Support", color: "#00D15F", glow: "rgba(0,209,95,.28)", href: "SupportTrack.pdf" },
+		{ key: "expert", label: "Expert Track", tabLabel: "Expert", color: "#FD8A26", glow: "rgba(253,138,38,.28)", href: "ExpertTrack.pdf" },
+		{ key: "manager", label: "Manager Track", tabLabel: "Manager", color: "#8E71F4", glow: "rgba(142,113,244,.26)", href: "ManagerTrack.pdf" },
+		{ key: "executive", label: "Executive Track", tabLabel: "Executive", color: "#57E0FF", glow: "rgba(87,224,255,.26)", href: "ExecutiveTrack.pdf" }
 	];
 
 	mapHosts.forEach((mapHost, mapIndex) => {
 		const svg = mapHost.querySelector("svg");
 		if(!svg) return;
+		const trackByKey = new Map(tracks.map(track => [track.key, track]));
+		const orderedTrackNodes = new Map();
+		const isMobile = () => window.matchMedia("(max-width: 900px)").matches;
 
 		svg.setAttribute("role", "img");
 		svg.setAttribute("aria-label", `Career path map ${mapIndex + 1}`);
@@ -350,6 +353,91 @@ document.addEventListener("DOMContentLoaded", () => {
 		});
 
 		let activeTrackKey = null;
+		let mobileUi = null;
+		let panX = 0;
+		let panMinX = 0;
+		let panMaxX = 0;
+		let hasPlayedMobilePeek = false;
+		let suppressTrackClick = false;
+
+		function setPan(nextPanX){
+			panX = Math.min(panMaxX, Math.max(panMinX, nextPanX));
+			svg.style.transform = `translateX(${panX}px)`;
+		}
+
+		function updateMobilePanBounds(){
+			if(!isMobile()){
+				panX = 0;
+				panMinX = 0;
+				panMaxX = 0;
+				svg.style.transform = "";
+				return;
+			}
+
+			const visibleWidth = mapHost.clientWidth;
+			const contentWidth = svg.getBoundingClientRect().width;
+			const extra = Math.max(0, contentWidth - visibleWidth);
+			panMinX = -extra;
+			panMaxX = 0;
+			setPan(panX);
+		}
+
+		function playMobilePeekOnce(){
+			if(!isMobile() || hasPlayedMobilePeek) return;
+			hasPlayedMobilePeek = true;
+			const travel = Math.min(140, Math.abs(panMinX) * 0.28);
+			if(travel < 8) return;
+
+			// Reveal there is hidden content to the right:
+			// map shifts left with a quick impulse, then glides and settles.
+			const impulseTarget = Math.max(panMinX, -(travel * 0.35));
+			const finalTarget = Math.max(panMinX, -travel);
+			const impulseMs = 320;
+			const glideMs = 2200;
+			const totalMs = impulseMs + glideMs;
+			let t0 = 0;
+
+			const easeOutQuad = t => 1 - ((1 - t) * (1 - t));
+			const easeOutCubic = t => 1 - Math.pow(1 - t, 3);
+
+			const tick = now => {
+				if(!isMobile()) return;
+				const elapsed = now - t0;
+				if(elapsed <= impulseMs){
+					const p = easeOutQuad(Math.min(1, elapsed / impulseMs));
+					setPan(impulseTarget * p);
+					requestAnimationFrame(tick);
+					return;
+				}
+
+				if(elapsed <= totalMs){
+					const p = easeOutCubic(Math.min(1, (elapsed - impulseMs) / glideMs));
+					setPan(impulseTarget + ((finalTarget - impulseTarget) * p));
+					requestAnimationFrame(tick);
+					return;
+				}
+
+				setPan(finalTarget);
+			};
+
+			window.setTimeout(() => {
+				if(!isMobile()) return;
+				t0 = performance.now();
+				requestAnimationFrame(tick);
+			}, 2000);
+		}
+
+		function installMobilePeekObserver(){
+			const observer = new IntersectionObserver(entries => {
+				entries.forEach(entry => {
+					if(entry.isIntersecting){
+						playMobilePeekOnce();
+						observer.disconnect();
+					}
+				});
+			}, { threshold: 0.4 });
+			observer.observe(mapHost);
+		}
 
 		function setTrackFocus(trackKey){
 			if(trackKey === activeTrackKey) return;
@@ -368,21 +456,132 @@ document.addEventListener("DOMContentLoaded", () => {
 			});
 		}
 
+		function buildMobileUi(){
+			if(mobileUi) return;
+
+			const panel = document.createElement("div");
+			panel.className = "career-mobile-panel";
+			const dragIcon = document.createElement("span");
+			dragIcon.className = "material-symbols-outlined career-mobile-drag-icon";
+			dragIcon.setAttribute("aria-hidden", "true");
+			dragIcon.textContent = "pan_tool_alt";
+			const instruction = document.createElement("p");
+			instruction.className = "career-mobile-instruction";
+			instruction.textContent = "Click on a track and download the complete version.";
+
+			const picker = document.createElement("div");
+			picker.className = "career-mobile-picker";
+
+			const buttons = new Map();
+			tracks.forEach(track => {
+				const button = document.createElement("button");
+				button.type = "button";
+				button.className = "career-mobile-tab";
+				button.dataset.trackKey = track.key;
+				button.textContent = track.tabLabel;
+				button.style.setProperty("--track-color", track.color);
+				button.addEventListener("click", () => {
+					window.open(track.href, "_blank", "noopener,noreferrer");
+				});
+				picker.appendChild(button);
+				buttons.set(track.key, button);
+			});
+
+			panel.appendChild(dragIcon);
+			panel.appendChild(instruction);
+			panel.appendChild(picker);
+			mapHost.appendChild(panel);
+			mobileUi = { panel, buttons };
+		}
+
+		function renderMobileCards(trackKey){
+			if(!mobileUi) return;
+			mobileUi.buttons.forEach(button => {
+				button.classList.add("is-active");
+				button.setAttribute("aria-pressed", "true");
+			});
+		}
+
+		function installMobileDragPan(){
+			let pointerDown = false;
+			let dragged = false;
+			let startX = 0;
+			let startPanX = 0;
+
+			mapHost.addEventListener("pointerdown", event => {
+				if(!isMobile()) return;
+				if(!event.target.closest("svg")) return;
+				pointerDown = true;
+				dragged = false;
+				startX = event.clientX;
+				startPanX = panX;
+				mapHost.classList.add("is-dragging");
+			});
+
+			mapHost.addEventListener("pointermove", event => {
+				if(!pointerDown || !isMobile()) return;
+				const deltaX = event.clientX - startX;
+				if(Math.abs(deltaX) > 4){
+					dragged = true;
+				}
+				setPan(startPanX + deltaX);
+			});
+
+			const endDrag = () => {
+				if(!pointerDown) return;
+				pointerDown = false;
+				mapHost.classList.remove("is-dragging");
+				if(dragged){
+					suppressTrackClick = true;
+				}
+			};
+
+			mapHost.addEventListener("pointerup", endDrag);
+			mapHost.addEventListener("pointercancel", endDrag);
+			mapHost.addEventListener("pointerleave", endDrag);
+		}
+
+		function syncMobileHybridState(){
+			if(isMobile()){
+				mapHost.classList.add("is-mobile-hybrid");
+				buildMobileUi();
+				updateMobilePanBounds();
+				renderMobileCards();
+				setTrackFocus(null);
+				return;
+			}
+
+			mapHost.classList.remove("is-mobile-hybrid");
+			updateMobilePanBounds();
+			setTrackFocus(null);
+		}
+
 		svg.addEventListener("mousemove", event => {
+			if(isMobile()) return;
 			const shape = event.target.closest(".track-shape");
 			setTrackFocus(shape ? shape.dataset.trackKey : null);
 		});
 
 		svg.addEventListener("mouseleave", () => {
+			if(isMobile()) return;
 			setTrackFocus(null);
 		});
 
 		svg.addEventListener("click", event => {
 			const shape = event.target.closest(".track-shape");
 			if(!shape) return;
+			if(suppressTrackClick){
+				suppressTrackClick = false;
+				return;
+			}
 
 			const track = tracks.find(item => item.key === shape.dataset.trackKey);
 			if(!track) return;
+
+			if(isMobile()){
+				window.open(track.href, "_blank", "noopener,noreferrer");
+				return;
+			}
 
 			window.open(track.href, "_blank", "noopener,noreferrer");
 		});
@@ -424,6 +623,7 @@ document.addEventListener("DOMContentLoaded", () => {
 					if(rowGap > 6) return aPos.y - bPos.y;
 					return aPos.x - bPos.x;
 				});
+			orderedTrackNodes.set(track.key, orderedNodes);
 
 			orderedNodes.forEach(node => {
 				setTimeout(() => {
@@ -466,6 +666,11 @@ document.addEventListener("DOMContentLoaded", () => {
 				arrowPulseIndex++;
 			});
 		});
+
+		syncMobileHybridState();
+		installMobileDragPan();
+		installMobilePeekObserver();
+		window.addEventListener("resize", syncMobileHybridState);
 	});
 
 })();
