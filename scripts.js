@@ -377,8 +377,9 @@ document.addEventListener("DOMContentLoaded", () => {
 			const visibleWidth = mapHost.clientWidth;
 			const contentWidth = svg.getBoundingClientRect().width;
 			const extra = Math.max(0, contentWidth - visibleWidth);
-			panMinX = -extra;
-			panMaxX = 0;
+			const fadeSlack = 36;
+			panMinX = -(extra + fadeSlack);
+			panMaxX = fadeSlack;
 			setPan(panX);
 		}
 
@@ -459,15 +460,18 @@ document.addEventListener("DOMContentLoaded", () => {
 		function buildMobileUi(){
 			if(mobileUi) return;
 
+			const dragHint = document.createElement("div");
+			dragHint.className = "career-mobile-drag-hint";
+			dragHint.innerHTML = `
+				<span class="career-mobile-drag-text">DRAG THE</span>
+				<span class="material-symbols-outlined career-mobile-drag-icon" aria-hidden="true">swipe</span>
+				<span class="career-mobile-drag-text">DIAGRAM</span>
+			`;
 			const panel = document.createElement("div");
 			panel.className = "career-mobile-panel";
-			const dragIcon = document.createElement("span");
-			dragIcon.className = "material-symbols-outlined career-mobile-drag-icon";
-			dragIcon.setAttribute("aria-hidden", "true");
-			dragIcon.textContent = "swipe";
 			const instruction = document.createElement("p");
 			instruction.className = "career-mobile-instruction";
-			instruction.textContent = "Click on a track and download the complete version.";
+			instruction.textContent = "Click on a track and download the detailed PDF:";
 
 			const picker = document.createElement("div");
 			picker.className = "career-mobile-picker";
@@ -487,9 +491,16 @@ document.addEventListener("DOMContentLoaded", () => {
 				buttons.set(track.key, button);
 			});
 
-			panel.appendChild(dragIcon);
 			panel.appendChild(instruction);
 			panel.appendChild(picker);
+
+			const disclaimer = mapHost.querySelector(".career-path-disclaimer");
+			if(disclaimer && disclaimer.parentNode === mapHost){
+				mapHost.insertBefore(dragHint, disclaimer);
+			}else{
+				mapHost.appendChild(dragHint);
+			}
+
 			mapHost.appendChild(panel);
 			mobileUi = { panel, buttons };
 		}
