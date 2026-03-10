@@ -306,6 +306,10 @@ document.addEventListener("DOMContentLoaded", () => {
 		const trackByKey = new Map(tracks.map(track => [track.key, track]));
 		const orderedTrackNodes = new Map();
 		const isMobile = () => window.matchMedia("(max-width: 900px)").matches;
+		const tooltip = document.createElement("div");
+		tooltip.className = "career-track-tooltip";
+		tooltip.textContent = "Download detailed PDF";
+		document.body.appendChild(tooltip);
 
 		svg.setAttribute("role", "img");
 		svg.setAttribute("aria-label", `Career path map ${mapIndex + 1}`);
@@ -571,11 +575,22 @@ document.addEventListener("DOMContentLoaded", () => {
 			if(isMobile()) return;
 			const shape = event.target.closest(".track-shape");
 			setTrackFocus(shape ? shape.dataset.trackKey : null);
+			if(shape){
+				tooltip.style.opacity = "1";
+				tooltip.style.transform = "translateY(0)";
+				tooltip.style.left = `${event.clientX + 14}px`;
+				tooltip.style.top = `${event.clientY + 14}px`;
+			}else{
+				tooltip.style.opacity = "0";
+				tooltip.style.transform = "translateY(4px)";
+			}
 		});
 
 		svg.addEventListener("mouseleave", () => {
 			if(isMobile()) return;
 			setTrackFocus(null);
+			tooltip.style.opacity = "0";
+			tooltip.style.transform = "translateY(4px)";
 		});
 
 		svg.addEventListener("click", event => {

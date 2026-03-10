@@ -468,6 +468,23 @@ h2 svg{
 	pointer-events:none;
 }
 
+.career-track-tooltip{
+	position:fixed;
+	z-index:50;
+	padding:6px 10px;
+	border-radius:999px;
+	background:#000;
+	color:#fff;
+	font-size:12px;
+	font-weight:500;
+	letter-spacing:.01em;
+	opacity:0;
+	transform:translateY(4px);
+	transition:opacity .15s ease, transform .15s ease;
+	pointer-events:none;
+	white-space:nowrap;
+}
+
 .career-mobile-panel{
 	display:none;
 }
