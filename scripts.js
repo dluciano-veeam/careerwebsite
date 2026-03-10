@@ -464,7 +464,7 @@ document.addEventListener("DOMContentLoaded", () => {
 			const dragIcon = document.createElement("span");
 			dragIcon.className = "material-symbols-outlined career-mobile-drag-icon";
 			dragIcon.setAttribute("aria-hidden", "true");
-			dragIcon.textContent = "pan_tool_alt";
+			dragIcon.textContent = "swipe";
 			const instruction = document.createElement("p");
 			instruction.className = "career-mobile-instruction";
 			instruction.textContent = "Click on a track and download the complete version.";
