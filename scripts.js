@@ -658,6 +658,9 @@ document.addEventListener("DOMContentLoaded", () => {
 					if(rowGap > 6) return aPos.y - bPos.y;
 					return aPos.x - bPos.x;
 				});
+			if(track.key === "expert" && orderedArrows.length > 1){
+				orderedArrows.push(orderedArrows.shift());
+			}
 
 			orderedArrows.forEach(node => {
 				const revealAt = sequenceIndex * appearDelayStep;
