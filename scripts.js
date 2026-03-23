@@ -21,11 +21,50 @@ $(document).ready(function(){
 	const svgClosed = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640"><path d="M96 160C96 142.3 110.3 128 128 128L512 128C529.7 128 544 142.3 544 160C544 177.7 529.7 192 512 192L128 192C110.3 192 96 177.7 96 160zM96 320C96 302.3 110.3 288 128 288L512 288C529.7 288 544 302.3 544 320C544 337.7 529.7 352 512 352L128 352C110.3 352 96 337.7 96 320zM544 480C544 497.7 529.7 512 512 512L128 512C110.3 512 96 497.7 96 480C96 462.3 110.3 448 128 448L512 448C529.7 448 544 462.3 544 480z"/></svg>`;
     const svgOpen = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640"><path d="M183.1 137.4C170.6 124.9 150.3 124.9 137.8 137.4C125.3 149.9 125.3 170.2 137.8 182.7L275.2 320L137.9 457.4C125.4 469.9 125.4 490.2 137.9 502.7C150.4 515.2 170.7 515.2 183.2 502.7L320.5 365.3L457.9 502.6C470.4 515.1 490.7 515.1 503.2 502.6C515.7 490.1 515.7 469.8 503.2 457.3L365.8 320L503.1 182.6C515.6 170.1 515.6 149.8 503.1 137.3C490.6 124.8 470.3 124.8 457.8 137.3L320.5 274.7L183.1 137.4z"/></svg>`;
 
-    $('#toggleMenu').on('click', function(){
+    $('#toggleMenu').on('click', function(e){
+		e.stopPropagation();
         $('#index').toggleClass('open');
 		// Toggle the SVG inside the button
         $(this).html( $('#index').hasClass('open') ? svgOpen : svgClosed );
     });
+
+	/* Open search (mobile) */
+	$('#searchMenu').on('click', function(e){
+		e.stopPropagation();
+		$('#index').addClass('open');
+		$('#toggleMenu').html(svgOpen);
+		const input = document.getElementById('sidebarSearch');
+		if(input){
+			input.focus();
+			input.setSelectionRange(input.value.length, input.value.length);
+		}
+	});
+
+	/* Close menu when clicking outside (mobile) */
+	$(document).on('click', function(e){
+		if(window.innerWidth >= 900) return;
+		const $index = $('#index');
+		if(!$index.hasClass('open')) return;
+		const isInsideMenu = $(e.target).closest('#index').length > 0;
+		const isToggle = $(e.target).closest('#toggleMenu, #searchMenu').length > 0;
+		if(!isInsideMenu && !isToggle){
+			$index.removeClass('open');
+			$('#toggleMenu').html(svgClosed);
+		}
+	});
+
+	/* Sidebar submenu toggle */
+	document.querySelectorAll('#index .menu-toggle').forEach(toggle => {
+		const group = toggle.closest('.menu-group');
+		const sublist = group?.querySelector('.menu-sublist');
+		if(!group || !sublist) return;
+
+		toggle.addEventListener('click', () => {
+			const isOpen = group.classList.toggle('open');
+			toggle.setAttribute('aria-expanded', String(isOpen));
+			sublist.setAttribute('aria-hidden', String(!isOpen));
+		});
+	});
 
     // Initial: SVG closed
     $('#toggleMenu').html(svgClosed);
@@ -57,6 +96,12 @@ $(document).ready(function(){
 			}
 		});
 
+		// Keep parent menu highlighted when a child is active
+		$('.menu-group').each(function(){
+			const hasActiveChild = $(this).find('.menu-sublist a.active').length > 0;
+			$(this).toggleClass('active', hasActiveChild);
+		});
+
 		if(scrollPos > 300){
 			$('#backToTop').fadeIn();
 		}else{
@@ -68,6 +113,11 @@ $(document).ready(function(){
 	$('.category').on('mouseenter', function(){
 		$('#index a').removeClass('active');
 		$('#index a[href="#'+this.id+'"]').addClass('active');
+
+		$('.menu-group').each(function(){
+			const hasActiveChild = $(this).find('.menu-sublist a.active').length > 0;
+			$(this).toggleClass('active', hasActiveChild);
+		});
 	});
 
 	/* Back to top */
@@ -329,30 +379,75 @@ document.addEventListener("DOMContentLoaded", () => {
 			});
 		});
 
-		// Arrow connectors use gradient fills (url(#paint...)); map them to track color.
+		const trackNameMatchers = [
+			{ key: "support", pattern: /support/i },
+			{ key: "expert", pattern: /expert/i },
+			{ key: "manager", pattern: /manager/i },
+			{ key: "executive", pattern: /executive/i }
+		];
+
 		const gradientTrackMap = {};
 		svg.querySelectorAll("defs linearGradient[id]").forEach(gradient => {
 			const gradientId = gradient.id;
-			const stops = [...gradient.querySelectorAll("stop")].map(stop => (stop.getAttribute("stop-color") || "").toUpperCase());
-			const track = tracks.find(item => stops.includes(item.color.toUpperCase()));
-			if(track){
-				gradientTrackMap[gradientId] = track.key;
+			const stops = [...gradient.querySelectorAll("stop")]
+				.map(stop => (stop.getAttribute("stop-color") || "").toUpperCase());
+			const keys = tracks
+				.filter(item => stops.includes(item.color.toUpperCase()))
+				.map(item => item.key);
+			if(keys.length){
+				gradientTrackMap[gradientId] = keys;
 			}
 		});
 
-		[...svg.querySelectorAll('[fill^="url(#paint"]')].forEach(node => {
+		const extractTrackKeysFromLabel = label => {
+			if(!label) return [];
+			const hits = new Set();
+			trackNameMatchers.forEach(matcher => {
+				if(matcher.pattern.test(label)){
+					hits.add(matcher.key);
+				}
+			});
+			return [...hits];
+		};
+
+		const resolveArrowTrackKeys = node => {
+			const labels = [];
+			let current = node;
+			while(current && current !== svg){
+				["id", "data-name", "aria-label", "inkscape:label", "class"].forEach(attr => {
+					const value = current.getAttribute && current.getAttribute(attr);
+					if(value){
+						labels.push(value);
+					}
+				});
+				current = current.parentElement;
+			}
+
+			const labeledKeys = new Set();
+			labels.forEach(label => {
+				extractTrackKeysFromLabel(label).forEach(key => labeledKeys.add(key));
+			});
+			if(labeledKeys.size){
+				return [...labeledKeys];
+			}
+
 			const fillValue = node.getAttribute("fill") || "";
 			const match = fillValue.match(/^url\(#([^)]+)\)$/);
-			if(!match) return;
+			if(!match) return [];
+			return gradientTrackMap[match[1]] || [];
+		};
 
-			const gradientId = match[1];
-			const trackKey = gradientTrackMap[gradientId];
-			if(!trackKey) return;
+		[...svg.querySelectorAll('[fill^="url(#paint"]')].forEach(node => {
+			const trackKeys = resolveArrowTrackKeys(node);
+			if(!trackKeys.length) return;
 
-			node.classList.add("track-arrow", `track-arrow-${trackKey}`);
-			const track = tracks.find(item => item.key === trackKey);
-			if(track){
-				node.style.setProperty("--track-glow", track.glow);
+			node.classList.add("track-arrow");
+			node.setAttribute("data-track-keys", trackKeys.join(","));
+			trackKeys.forEach(trackKey => node.classList.add(`track-arrow-${trackKey}`));
+
+			const primaryTrack = tracks.find(item => item.key === trackKeys[0]);
+			if(primaryTrack){
+				node.style.setProperty("--track-glow", primaryTrack.glow);
 			}
 		});
 
@@ -456,6 +551,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
 			svg.querySelectorAll(".track-arrow").forEach(node => {
 				const isActive = trackKey && node.classList.contains(`track-arrow-${trackKey}`);
+				if(isActive){
+					const track = trackByKey.get(trackKey);
+					if(track){
+						node.style.setProperty("--track-glow", track.glow);
+					}
+				}
 				node.classList.toggle("track-hover", !!isActive);
 				node.classList.toggle("track-muted", !!trackKey && !isActive);
 			});
@@ -613,10 +714,7 @@ document.addEventListener("DOMContentLoaded", () => {
 		});
 
 		const appearDelayStep = 95;
-		const arrowPulseLeadMs = 80;
-		const arrowPulseStepMs = 130;
 		let sequenceIndex = 0;
-		let arrowPulseIndex = 0;
 		const introNodes = [...svg.querySelectorAll('[fill="black"], [fill="#000"], [fill="#000000"], [fill="#000000FF"]')];
 
 		introNodes.forEach(node => {
@@ -663,38 +761,14 @@ document.addEventListener("DOMContentLoaded", () => {
 			});
 		});
 
-		// Arrows animate after all boxes, preserving the same track sequence.
-		tracks.forEach(track => {
-			const orderedArrows = [...svg.querySelectorAll(`.track-arrow-${track.key}`)]
-				.sort((a, b) => {
-					const aPos = getNodeVisualOrder(a);
-					const bPos = getNodeVisualOrder(b);
-					const rowGap = Math.abs(aPos.y - bPos.y);
-					if(rowGap > 6) return aPos.y - bPos.y;
-					return aPos.x - bPos.x;
-				});
-			if(track.key === "expert" && orderedArrows.length > 1){
-				orderedArrows.push(orderedArrows.shift());
-			}
-
-			orderedArrows.forEach(node => {
-				const revealAt = sequenceIndex * appearDelayStep;
-				setTimeout(() => {
-					node.classList.add("track-visible");
-				}, revealAt);
-
-				// "Living trail": short glow pulse in sequence, after arrows appear.
-				setTimeout(() => {
-					node.classList.add("track-lit");
-					setTimeout(() => {
-						node.classList.remove("track-lit");
-					}, 360);
-				}, revealAt + arrowPulseLeadMs + (arrowPulseIndex * arrowPulseStepMs));
-
-				sequenceIndex++;
-				arrowPulseIndex++;
-			});
-		});
+		const allArrows = [...svg.querySelectorAll(".track-arrow")];
+		if(allArrows.length){
+			const revealAt = sequenceIndex * appearDelayStep;
+			setTimeout(() => {
+				allArrows.forEach(node => node.classList.add("track-visible"));
+			}, revealAt);
+			sequenceIndex++;
+		}
 
 		syncMobileHybridState();
 		installMobileDragPan();
