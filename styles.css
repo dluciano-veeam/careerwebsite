@@ -669,6 +669,13 @@ span.material-symbols-outlined.career-mobile-drag-icon {
 	margin:24px 0 16px;
 }
 
+.intro-lead{
+	font-size:16px;
+	font-weight:500;
+	color:#000;
+	margin:24px 0 16px;
+}
+
 .column100{
 	flex:0 0 100%;
 	box-sizing:border-box;
