@@ -344,10 +344,10 @@ document.addEventListener("DOMContentLoaded", () => {
 	if(!mapHosts.length) return;
 
 	const tracks = [
-		{ key: "support", label: "Support Track", tabLabel: "Support", color: "#00D15F", glow: "rgba(0,209,95,.28)", href: "SupportTrack.pdf" },
-		{ key: "expert", label: "Expert Track", tabLabel: "Expert", color: "#FD8A26", glow: "rgba(253,138,38,.28)", href: "ExpertTrack.pdf" },
-		{ key: "manager", label: "Manager Track", tabLabel: "Manager", color: "#8E71F4", glow: "rgba(142,113,244,.26)", href: "ManagerTrack.pdf" },
-		{ key: "executive", label: "Executive Track", tabLabel: "Executive", color: "#57E0FF", glow: "rgba(87,224,255,.26)", href: "ExecutiveTrack.pdf" }
+		{ key: "support", label: "Support Track", tabLabel: "Support", color: "#00D15F", glow: "rgba(0,209,95,.28)", href: "SupportTrack.pdf", thumb: "SupportTrack-thumb.png", tooltipText: "Download Support Track PDF" },
+		{ key: "expert", label: "Expert Track", tabLabel: "Expert", color: "#FD8A26", glow: "rgba(253,138,38,.28)", href: "ExpertTrack.pdf", thumb: "ExpertTrack-thumb.png", tooltipText: "Download Expert Track PDF" },
+		{ key: "manager", label: "Manager Track", tabLabel: "Manager", color: "#8E71F4", glow: "rgba(142,113,244,.26)", href: "ManagerTrack.pdf", thumb: "ManagerTrack-thumb.png", tooltipText: "Download Manager Track PDF" },
+		{ key: "executive", label: "Executive Track", tabLabel: "Executive", color: "#57E0FF", glow: "rgba(87,224,255,.26)", href: "ExecutiveTrack.pdf", thumb: "ExecutiveTrack-thumb.png", tooltipText: "Download Executive Track PDF" }
 	];
 
 	mapHosts.forEach((mapHost, mapIndex) => {
@@ -358,7 +358,12 @@ document.addEventListener("DOMContentLoaded", () => {
 		const isMobile = () => window.matchMedia("(max-width: 900px)").matches;
 		const tooltip = document.createElement("div");
 		tooltip.className = "career-track-tooltip";
-		tooltip.textContent = "Download detailed PDF";
+		tooltip.innerHTML = `
+			<img class="career-track-thumb" alt="" loading="lazy" decoding="async">
+			<span class="career-track-tooltip-text">Download detailed PDF</span>
+		`;
+		const tooltipImg = tooltip.querySelector(".career-track-thumb");
+		const tooltipText = tooltip.querySelector(".career-track-tooltip-text");
 		document.body.appendChild(tooltip);
 
 		svg.setAttribute("role", "img");
@@ -675,8 +680,18 @@ document.addEventListener("DOMContentLoaded", () => {
 		svg.addEventListener("mousemove", event => {
 			if(isMobile()) return;
 			const shape = event.target.closest(".track-shape");
-			setTrackFocus(shape ? shape.dataset.trackKey : null);
-			if(shape){
+			const trackKey = shape ? shape.dataset.trackKey : null;
+			const track = trackKey ? trackByKey.get(trackKey) : null;
+			setTrackFocus(trackKey);
+			if(shape && track){
+				tooltip.style.setProperty("--track-thumb-bg", track.color);
+				if(tooltipImg){
+					tooltipImg.src = track.thumb;
+					tooltipImg.alt = `${track.label} PDF thumbnail`;
+				}
+				if(tooltipText){
+					tooltipText.textContent = track.tooltipText || "Download detailed PDF";
+				}
 				tooltip.style.opacity = "1";
 				tooltip.style.transform = "translateY(0)";
 				tooltip.style.left = `${event.clientX + 14}px`;

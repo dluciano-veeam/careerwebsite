@@ -82,7 +82,7 @@ h1{
 }
 
 h2{
-	font-size:36px;
+	font-size:30px;
 	font-weight:500;
 	font-feature-settings:"ss01" 1;
 	margin-top:-24px;
@@ -91,6 +91,16 @@ h2{
 	line-height:normal;
 	color:#000;
 	width:fit-content;
+}
+
+#introText h2,
+#careerPathBlock h2,
+.career-paths-title h2{
+	font-size:36px;
+}
+
+#introText h2{
+	line-height:1.1;
 }
 
 h3{
@@ -166,7 +176,7 @@ h2 svg{
 	position:relative;
 	width:100%;
 	overflow:hidden;
-	border-bottom-right-radius: 60px;
+	border-bottom-right-radius: 0;
 }
 
 #topBannerPicture img{
@@ -368,6 +378,22 @@ h2 svg{
 	padding:24px;
 }
 
+.section-separator{
+	max-width:1230px;
+	height:1px;
+	background:#e5e7eb;
+	margin:12px 24px 0 280px;
+}
+
+.career-paths-title{
+	margin-top:18px;
+	margin-bottom:0;
+}
+
+.career-paths-title + .category{
+	margin-top:4px;
+}
+
 #introText{
 	color:#000;
 	margin-top: 48px;
@@ -562,9 +588,12 @@ h2 svg{
 .career-track-tooltip{
 	position:fixed;
 	z-index:50;
-	padding:6px 10px;
-	border-radius:999px;
-	background:#000;
+	display:flex;
+	align-items:center;
+	gap:10px;
+	padding:8px 10px;
+	border-radius:12px;
+	background:#0c0f14;
 	color:#fff;
 	font-size:12px;
 	font-weight:500;
@@ -573,7 +602,20 @@ h2 svg{
 	transform:translateY(4px);
 	transition:opacity .15s ease, transform .15s ease;
 	pointer-events:none;
+	box-shadow:0 10px 26px rgba(0,0,0,.22);
+}
+
+.career-track-tooltip-text{
 	white-space:nowrap;
+}
+
+.career-track-thumb{
+	width:72px;
+	height:52px;
+	border-radius:6px;
+	object-fit:cover;
+	background:var(--track-thumb-bg, #1b2230);
+	box-shadow:0 6px 14px rgba(0,0,0,.22);
 }
 
 .career-mobile-panel{
